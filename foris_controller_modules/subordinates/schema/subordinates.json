@@ -1,0 +1,422 @@
+{
+    "definitions": {
+        "subordinate_options": {
+            "type": "object",
+            "properties": {
+                "custom_name": {"type": "string"}
+            },
+            "additionalProperties": false,
+            "required": ["custom_name"]
+        },
+        "subsubordinate_options": {
+            "type": "object",
+            "properties": {
+                "custom_name": {"type": "string"}
+            },
+            "additionalProperties": false,
+            "required": ["custom_name"]
+        },
+        "subordinate": {
+            "type": "object",
+            "properties": {
+                "controller_id": {"$ref": "#/definitions/controller_id"},
+                "enabled": {"type": "boolean"},
+                "options": {"$ref": "#/definitions/subordinate_options"},
+                "subsubordinates": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/subsubordinate"}
+                }
+            },
+            "additionalProperties": false,
+            "required": ["controller_id", "enabled", "options", "subsubordinates"]
+        },
+        "subsubordinate": {
+            "type": "object",
+            "properties": {
+                "controller_id": {"$ref": "#/definitions/controller_id"},
+                "enabled": {"type": "boolean"},
+                "options": {"$ref": "#/definitions/subsubordinate_options"}
+            },
+            "additionalProperties": false,
+            "required": ["controller_id", "enabled"]
+        }
+    },
+    "oneOf": [
+        {
+            "description": "Request to obtain a list of subordinates",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["list"]}
+            },
+            "additionalProperties": false
+        },
+        {
+            "description": "Reply to obtain a list subordinates",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["list"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "subordinates": {
+                            "items": {"$ref": "#/definitions/subordinate"}
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["subordinates"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to add a subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["add_sub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "token": {"type": "string"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["token"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to add a subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["add_sub"]},
+                "data": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "result": {"enum": [true]},
+                                "controller_id": {"$ref": "#/definitions/controller_id"}
+                            },
+                            "additionalProperties": false,
+                            "required": ["result", "controller_id"]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "result": {"enum": [false]}
+                            },
+                            "additionalProperties": false,
+                            "required": ["result"]
+                        }
+                    ]
+                }
+
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification for adding a subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["add_sub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to remove a subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["del"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification that a subordinate was removed",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["del"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to remove a subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["del"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["result"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to enable/disable subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["set_enabled"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "enabled": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "enabled"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to enable/disable subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["set_enabled"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["result"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification that a subordinate was updated",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["set_enabled"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "enabled": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "enabled"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to add a subsubordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["add_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "via": {"$ref": "#/definitions/controller_id"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "via"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to add a subsubordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["add_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["result"]
+                }
+
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification for adding a subsubordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["add_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "via": {"$ref": "#/definitions/controller_id"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "via"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to update subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["update_sub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "options": {"$ref": "#/definitions/subordinate_options"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "options"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to update subordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["update_sub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["result"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification that subordinate was updated",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["update_sub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "options": {"$ref": "#/definitions/subordinate_options"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "options"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Request to update subsubordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["request"]},
+                "action": {"enum": ["update_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "options": {"$ref": "#/definitions/subsubordinate_options"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "options"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Reply to update subsubordinate",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["reply"]},
+                "action": {"enum": ["update_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "boolean"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["result"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        },
+        {
+            "description": "Notification that subsubordinate was updated",
+            "properties": {
+                "module": {"enum": ["subordinates"]},
+                "kind": {"enum": ["notification"]},
+                "action": {"enum": ["update_subsub"]},
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "controller_id": {"$ref": "#/definitions/controller_id"},
+                        "options": {"$ref": "#/definitions/subsubordinate_options"}
+                    },
+                    "additionalProperties": false,
+                    "required": ["controller_id", "options"]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["data"]
+        }
+    ]
+}
