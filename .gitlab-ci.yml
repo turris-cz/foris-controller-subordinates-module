@@ -11,7 +11,8 @@ stages:
 
     - pip install .
 
-    - python setup.py test --addopts="--backend openwrt --backend mock"
+    - python setup.py test --addopts="--backend mock --message-bus mqtt"
+    - python setup.py test --addopts="--backend openwrt --message-bus mqtt"
 
 test_python3:
   image: registry.labs.nic.cz/turris/foris-ci/python3
