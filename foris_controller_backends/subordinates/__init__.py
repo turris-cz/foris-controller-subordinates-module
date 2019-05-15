@@ -207,12 +207,12 @@ class SubordinatesFiles(BaseFile):
     def extract_token_subordinate(token: str) -> typing.Tuple[dict, dict]:
         token_data = BytesIO(base64.b64decode(token))
         with tarfile.open(fileobj=token_data, mode="r:gz") as tar:
-            config_file = [e.name for e in tar.getmembers() if e.name.endswith(".json")][0]
+            config_file = [e for e in tar.getmembers() if e.name.endswith(".json")][0]
             with tar.extractfile(config_file) as f:
                 conf = json.load(f)
             file_data = {}
-            for member in tar.getmembers():
-                with tar.extractfile(member.name) as f:
+            for member in [e for e in tar.getmembers() if e.isfile()]:
+                with tar.extractfile(member) as f:
                     file_data[os.path.basename(member.name)] = f.read()
         return conf, file_data
 
