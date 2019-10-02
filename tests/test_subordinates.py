@@ -22,18 +22,27 @@ import json
 import pytest
 import tarfile
 import pathlib
+import threading
 
 from io import BytesIO
 
 
 from foris_controller_testtools.fixtures import (
-    backend, infrastructure, ubusd_test, only_backends, only_message_buses, uci_configs_init,
-    init_script_result, lock_backend, file_root_init, network_restart_command,
-    UCI_CONFIG_DIR_PATH, mosquitto_test, start_buses, FILE_ROOT_PATH
+    backend,
+    infrastructure,
+    ubusd_test,
+    only_backends,
+    only_message_buses,
+    uci_configs_init,
+    init_script_result,
+    file_root_init,
+    network_restart_command,
+    UCI_CONFIG_DIR_PATH,
+    mosquitto_test,
+    start_buses,
+    FILE_ROOT_PATH,
 )
-from foris_controller_testtools.utils import (
-    get_uci_module, check_service_result
-)
+from foris_controller_testtools.utils import get_uci_module, check_service_result
 
 
 def prepare_subordinate_token(controller_id):
@@ -52,14 +61,20 @@ def prepare_subordinate_token(controller_id):
         add_to_tar(tar, f"some_name/token.crt", "token cert content")
         add_to_tar(tar, f"some_name/token.key", "token key content")
         add_to_tar(tar, f"some_name/ca.crt", "ca cert content")
-        add_to_tar(tar, f"some_name/conf.json", json.dumps({
-            "name": "some_name",
-            "hostname": "localhost",
-            "ipv4_ips": {"lan": ["123.123.123.123"], "wan": []},
-            "dhcp_names": [],
-            "port": 11884,
-            "device_id": controller_id,
-        }))
+        add_to_tar(
+            tar,
+            f"some_name/conf.json",
+            json.dumps(
+                {
+                    "name": "some_name",
+                    "hostname": "localhost",
+                    "ipv4_ips": {"lan": ["123.123.123.123"], "wan": []},
+                    "dhcp_names": [],
+                    "port": 11884,
+                    "device_id": controller_id,
+                }
+            ),
+        )
 
     new_file.seek(0)
     final_content = new_file.read()
@@ -68,87 +83,85 @@ def prepare_subordinate_token(controller_id):
     return base64.b64encode(final_content).decode()
 
 
-@pytest.mark.only_message_buses(['unix-socket', 'ubus'])
-def test_complex_subordinates_unsupported(uci_configs_init, infrastructure, start_buses, file_root_init):
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "list",
-        "kind": "request",
-    })
+@pytest.mark.only_message_buses(["unix-socket", "ubus"])
+def test_complex_subordinates_unsupported(
+    uci_configs_init, infrastructure, start_buses, file_root_init
+):
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "list", "kind": "request"}
+    )
     assert res == {
         "module": "subordinates",
         "action": "list",
         "kind": "reply",
-        "data": {"subordinates": []}
+        "data": {"subordinates": []},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": prepare_subordinate_token("1122334455667788"),
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_sub",
+            "kind": "request",
+            "data": {"token": prepare_subordinate_token("1122334455667788")},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788", "enabled": False,
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_sub",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788", "options": {"custom_name": "nice name"}
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "options": {"custom_name": "nice name"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_sub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
 
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates(
     uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
     def in_list(controller_id):
-        res = infrastructure.process_message({
-            "module": "subordinates",
-            "action": "list",
-            "kind": "request",
-        })
+        res = infrastructure.process_message(
+            {"module": "subordinates", "action": "list", "kind": "request"}
+        )
         assert "subordinates" in res["data"]
         output = None
         for record in res["data"]["subordinates"]:
@@ -164,19 +177,14 @@ def test_complex_subordinates(
     notifications = infrastructure.get_notifications(filters=filters)
 
     # add
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": token,
-        }
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": True, "controller_id": "1122334455667788"}
+        "data": {"result": True, "controller_id": "1122334455667788"},
     }
     notifications = infrastructure.get_notifications(notifications, filters=filters)
     if infrastructure.backend_name == "openwrt":
@@ -185,49 +193,48 @@ def test_complex_subordinates(
         "module": "subordinates",
         "action": "add_sub",
         "kind": "notification",
-        "data": {"controller_id": "1122334455667788"}
+        "data": {"controller_id": "1122334455667788"},
     }
     assert in_list("1122334455667788") == {
-        "controller_id": "1122334455667788", "enabled": True, "options": {"custom_name": ""},
+        "controller_id": "1122334455667788",
+        "enabled": True,
+        "options": {"custom_name": ""},
         "subsubordinates": [],
     }
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": token,
-        }
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
     if infrastructure.backend_name == "openwrt":
         check_service_result("fosquitto", "restart", passed=True, expected_found=False)
 
     assert in_list("1122334455667788") == {
-        "controller_id": "1122334455667788", "enabled": True, "options": {"custom_name": ""},
+        "controller_id": "1122334455667788",
+        "enabled": True,
+        "options": {"custom_name": ""},
         "subsubordinates": [],
     }
 
     # add2
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": prepare_subordinate_token("8877665544332211"),
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_sub",
+            "kind": "request",
+            "data": {"token": prepare_subordinate_token("8877665544332211")},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": True, "controller_id": "8877665544332211"}
+        "data": {"result": True, "controller_id": "8877665544332211"},
     }
     notifications = infrastructure.get_notifications(notifications, filters=filters)
     if infrastructure.backend_name == "openwrt":
@@ -236,29 +243,31 @@ def test_complex_subordinates(
         "module": "subordinates",
         "action": "add_sub",
         "kind": "notification",
-        "data": {"controller_id": "8877665544332211"}
+        "data": {"controller_id": "8877665544332211"},
     }
     assert in_list("8877665544332211") == {
-        "controller_id": "8877665544332211", "enabled": True, "options": {"custom_name": ""},
+        "controller_id": "8877665544332211",
+        "enabled": True,
+        "options": {"custom_name": ""},
         "subsubordinates": [],
     }
 
     # set
     filters = [("subordinates", "set_enabled")]
     notifications = infrastructure.get_notifications(filters=filters)
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788", "enabled": False,
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     if infrastructure.backend_name == "openwrt":
         check_service_result("fosquitto", "restart", passed=True)
@@ -267,25 +276,27 @@ def test_complex_subordinates(
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "notification",
-        "data": {"controller_id": "1122334455667788", "enabled": False}
+        "data": {"controller_id": "1122334455667788", "enabled": False},
     }
     assert in_list("1122334455667788") == {
-        "controller_id": "1122334455667788", "enabled": False, "options": {"custom_name": ""},
+        "controller_id": "1122334455667788",
+        "enabled": False,
+        "options": {"custom_name": ""},
         "subsubordinates": [],
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "2222334455667788", "enabled": True,
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "2222334455667788", "enabled": True},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
     if infrastructure.backend_name == "openwrt":
         check_service_result("fosquitto", "restart", passed=True, expected_found=False)
@@ -293,19 +304,19 @@ def test_complex_subordinates(
     # del
     filters = [("subordinates", "del")]
     notifications = infrastructure.get_notifications(filters=filters)
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     if infrastructure.backend_name == "openwrt":
         check_service_result("fosquitto", "restart", passed=True)
@@ -314,104 +325,102 @@ def test_complex_subordinates(
         "module": "subordinates",
         "action": "del",
         "kind": "notification",
-        "data": {"controller_id": "1122334455667788"}
+        "data": {"controller_id": "1122334455667788"},
     }
     assert None is in_list("1122334455667788")
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
     if infrastructure.backend_name == "openwrt":
         check_service_result("fosquitto", "restart", passed=True, expected_found=False)
     assert None is in_list("1122334455667788")
 
 
-@pytest.mark.only_backends(['openwrt'])
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_backends(["openwrt"])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result, lock_backend
+    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
-    uci = get_uci_module(lock_backend)
+    uci = get_uci_module(infrastructure.name)
     token = prepare_subordinate_token("1122334455667788")
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": token,
-        }
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": True, "controller_id": "1122334455667788"}
+        "data": {"result": True, "controller_id": "1122334455667788"},
     }
 
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
         data = backend.read()
 
-    assert uci.get_option_named(
-        data, "fosquitto", "1122334455667788", "address", "") == "123.123.123.123"
-    assert uci.get_option_named(
-        data, "fosquitto", "1122334455667788", "port", "") == "11884"
-    assert uci.parse_bool(uci.get_option_named(
-        data, "fosquitto", "1122334455667788", "enabled", ""))
+    assert (
+        uci.get_option_named(data, "fosquitto", "1122334455667788", "address", "")
+        == "123.123.123.123"
+    )
+    assert uci.get_option_named(data, "fosquitto", "1122334455667788", "port", "") == "11884"
+    assert uci.parse_bool(
+        uci.get_option_named(data, "fosquitto", "1122334455667788", "enabled", "")
+    )
 
-    subordinate_root = \
+    subordinate_root = (
         pathlib.Path(FILE_ROOT_PATH) / "etc" / "fosquitto" / "bridges" / "1122334455667788"
+    )
     assert subordinate_root.exists()
     assert (subordinate_root / "conf.json").exists()
     assert (subordinate_root / "token.crt").exists()
     assert (subordinate_root / "token.key").exists()
     assert (subordinate_root / "ca.crt").exists()
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788",
-            "enabled": False,
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
 
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
         data = backend.read()
 
-    assert not uci.parse_bool(uci.get_option_named(
-        data, "fosquitto", "1122334455667788", "enabled", ""))
+    assert not uci.parse_bool(
+        uci.get_option_named(data, "fosquitto", "1122334455667788", "enabled", "")
+    )
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "1122334455667788",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
 
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
@@ -422,190 +431,189 @@ def test_complex_subordinates_openwrt(
     assert not subordinate_root.exists()
 
 
-@pytest.mark.only_message_buses(['unix-socket', 'ubus'])
-def test_complex_subsubordinates_unsupported(uci_configs_init, infrastructure, start_buses, file_root_init):
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "8877665544332211",
-            "via": "1122334455667788",
+@pytest.mark.only_message_buses(["unix-socket", "ubus"])
+def test_complex_subsubordinates_unsupported(
+    uci_configs_init, infrastructure, start_buses, file_root_init
+):
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "8877665544332211", "via": "1122334455667788"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "8877665544332211",
-            "enabled": False
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "8877665544332211", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "8877665544332211",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "8877665544332211"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
 
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subsubordinates(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result, lock_backend
+    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
     # prepare subordinates
     def add_subordinate(controller_id, result):
         token = prepare_subordinate_token(controller_id)
-        res = infrastructure.process_message({
-            "module": "subordinates",
-            "action": "add_sub",
-            "kind": "request",
-            "data": {
-                "token": token,
+        res = infrastructure.process_message(
+            {
+                "module": "subordinates",
+                "action": "add_sub",
+                "kind": "request",
+                "data": {"token": token},
             }
-        })
+        )
         if result:
             assert res == {
                 "module": "subordinates",
                 "action": "add_sub",
                 "kind": "reply",
-                "data": {"result": True, "controller_id": controller_id}
+                "data": {"result": True, "controller_id": controller_id},
             }
         else:
             assert res == {
-                    "module": "subordinates",
-                    "action": "add_sub",
-                    "kind": "reply",
-                    "data": {"result": False}
-                }
+                "module": "subordinates",
+                "action": "add_sub",
+                "kind": "reply",
+                "data": {"result": False},
+            }
+
     add_subordinate("8888888888888888", True)
     add_subordinate("7777777777777777", True)
 
     def check_under(parent, child):
-        res = infrastructure.process_message({
-            "module": "subordinates",
-            "action": "list",
-            "kind": "request",
-        })
-        assert 1 == len([
-            e for record in res["data"]["subordinates"] if record["controller_id"] == parent
-            for e in record["subsubordinates"] if e["controller_id"] == child
-        ])
+        res = infrastructure.process_message(
+            {"module": "subordinates", "action": "list", "kind": "request"}
+        )
+        assert 1 == len(
+            [
+                e
+                for record in res["data"]["subordinates"]
+                if record["controller_id"] == parent
+                for e in record["subsubordinates"]
+                if e["controller_id"] == child
+            ]
+        )
 
     filters = [("subordinates", "add_subsub")]
     notifications = infrastructure.get_notifications(filters=filters)
     # add subsub success
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "6666666666666666",
-            "via": "8888888888888888",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "6666666666666666", "via": "8888888888888888"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     notifications = infrastructure.get_notifications(notifications, filters=filters)
     assert notifications[-1] == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "notification",
-        "data": {"controller_id": "6666666666666666", "via": "8888888888888888"}
+        "data": {"controller_id": "6666666666666666", "via": "8888888888888888"},
     }
     check_under("8888888888888888", "6666666666666666")
 
     # already added
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "6666666666666666",
-            "via": "7777777777777777",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "6666666666666666", "via": "7777777777777777"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
     # add subsub with same controller_id as sub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "7777777777777777",
-            "via": "8888888888888888",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "7777777777777777", "via": "8888888888888888"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
     # add subsub when via subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "5555555555555555",
-            "via": "6666666666666666",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "5555555555555555", "via": "6666666666666666"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
     # add subsub when via non existing
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "5555555555555555",
-            "via": "1111111111111111",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "5555555555555555", "via": "1111111111111111"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": False}
+        "data": {"result": False},
     }
 
     # add sub but subsub already exists
@@ -614,92 +622,87 @@ def test_complex_subsubordinates(
     filters = [("subordinates", "set_enabled")]
     notifications = infrastructure.get_notifications(filters=filters)
     # set subsub success
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "6666666666666666",
-            "enabled": False,
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "6666666666666666", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     notifications = infrastructure.get_notifications(notifications, filters=filters)
     assert notifications[-1] == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "notification",
-        "data": {
-            "controller_id": "6666666666666666",
-            "enabled": False,
-        }
+        "data": {"controller_id": "6666666666666666", "enabled": False},
     }
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "list",
-        "kind": "request",
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "list", "kind": "request"}
+    )
     assert "subordinates" in res["data"]
     for record in res["data"]["subordinates"]:
         if record["controller_id"] == "8888888888888888":
             assert record["subsubordinates"][0] == {
                 "controller_id": "6666666666666666",
                 "enabled": False,
-                "options": {"custom_name": ""}
+                "options": {"custom_name": ""},
             }
 
     filters = [("subordinates", "del")]
     notifications = infrastructure.get_notifications(filters=filters)
     # del subsub success
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "6666666666666666",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "6666666666666666"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     notifications = infrastructure.get_notifications(notifications, filters=filters)
     assert notifications[-1] == {
         "module": "subordinates",
         "action": "del",
         "kind": "notification",
-        "data": {"controller_id": "6666666666666666"}
+        "data": {"controller_id": "6666666666666666"},
     }
 
-@pytest.mark.only_backends(['openwrt'])
-@pytest.mark.only_message_buses(['mqtt'])
+
+@pytest.mark.only_backends(["openwrt"])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subsubordinates_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result, lock_backend
+    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
-    uci = get_uci_module(lock_backend)
+    uci = get_uci_module(infrastructure.name)
 
     def add_subordinate(controller_id):
         token = prepare_subordinate_token(controller_id)
-        res = infrastructure.process_message({
-            "module": "subordinates",
-            "action": "add_sub",
-            "kind": "request",
-            "data": {
-                "token": token,
+        res = infrastructure.process_message(
+            {
+                "module": "subordinates",
+                "action": "add_sub",
+                "kind": "request",
+                "data": {"token": token},
             }
-        })
+        )
         assert res == {
             "module": "subordinates",
             "action": "add_sub",
             "kind": "reply",
-            "data": {"result": True, "controller_id": controller_id}
+            "data": {"result": True, "controller_id": controller_id},
         }
         check_service_result("fosquitto", "restart", passed=True)
 
@@ -707,20 +710,19 @@ def test_complex_subsubordinates_openwrt(
     add_subordinate("5555555555555555")
 
     # add subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "2222222222222222",
-            "via": "4444444444444444",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "2222222222222222", "via": "4444444444444444"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     check_service_result("fosquitto", "restart", passed=True)
 
@@ -730,20 +732,19 @@ def test_complex_subsubordinates_openwrt(
     assert uci.get_option_named(data, "fosquitto", "2222222222222222", "via") == "4444444444444444"
 
     # set subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "set_enabled",
-        "kind": "request",
-        "data": {
-            "controller_id": "2222222222222222",
-            "enabled": False
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "set_enabled",
+            "kind": "request",
+            "data": {"controller_id": "2222222222222222", "enabled": False},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "set_enabled",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     check_service_result("fosquitto", "restart", passed=True)
 
@@ -752,22 +753,23 @@ def test_complex_subsubordinates_openwrt(
 
     assert uci.get_option_named(data, "fosquitto", "2222222222222222", "via") == "4444444444444444"
     assert not uci.parse_bool(
-        uci.get_option_named(data, "fosquitto", "2222222222222222", "enabled"))
+        uci.get_option_named(data, "fosquitto", "2222222222222222", "enabled")
+    )
 
     # del subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "2222222222222222",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "2222222222222222"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "del",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
     check_service_result("fosquitto", "restart", passed=True)
 
@@ -778,40 +780,37 @@ def test_complex_subsubordinates_openwrt(
         uci.get_section(data, "fosquitto", "2222222222222222")
 
     # del section and all its subsections
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "1111111111111111",
-            "via": "4444444444444444",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "1111111111111111", "via": "4444444444444444"},
         }
-    })
+    )
     assert res["data"]["result"]
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "del",
-        "kind": "request",
-        "data": {
-            "controller_id": "4444444444444444",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "del",
+            "kind": "request",
+            "data": {"controller_id": "4444444444444444"},
         }
-    })
+    )
     assert res["data"]["result"]
 
     with pytest.raises(uci.UciRecordNotFound):
         uci.get_section(data, "fosquitto", "1111111111111111")
 
 
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_options(
     uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
     def get_options(controller_id):
-        res = infrastructure.process_message({
-            "module": "subordinates",
-            "action": "list",
-            "kind": "request",
-        })
+        res = infrastructure.process_message(
+            {"module": "subordinates", "action": "list", "kind": "request"}
+        )
         assert "subordinates" in res["data"]
         for record in res["data"]["subordinates"]:
             if record["controller_id"] == controller_id:
@@ -823,196 +822,179 @@ def test_complex_subordinates_options(
                     return subsub["options"]
         return None
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": prepare_subordinate_token("1234567887654321"),
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_sub",
+            "kind": "request",
+            "data": {"token": prepare_subordinate_token("1234567887654321")},
         }
-    })
+    )
     assert res["data"]["result"]
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "8765432112345678",
-            "via": "1234567887654321",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "8765432112345678", "via": "1234567887654321"},
         }
-    })
+    )
     assert res["data"]["result"]
 
     assert get_options("1234567887654321") == {"custom_name": ""}
     assert get_options("8765432112345678") == {"custom_name": ""}
 
     # sub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_sub",
-        "kind": "request",
-        "data": {
-            "controller_id": "1234567887654321",
-            "options": {"custom_name": "sub1"}
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "1234567887654321", "options": {"custom_name": "sub1"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_sub",
         "kind": "reply",
-        "data": {
-            "result": True,
-        }
+        "data": {"result": True},
     }
     assert get_options("1234567887654321") == {"custom_name": "sub1"}
 
     # subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "8765432112345678",
-            "options": {"custom_name": "subsub1"},
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_subsub",
+            "kind": "request",
+            "data": {"controller_id": "8765432112345678", "options": {"custom_name": "subsub1"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_subsub",
         "kind": "reply",
-        "data": {
-            "result": True,
-        }
+        "data": {"result": True},
     }
     assert get_options("8765432112345678") == {"custom_name": "subsub1"}
 
     # non-exsiting
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_sub",
-        "kind": "request",
-        "data": {
-            "controller_id": "7755331188664422",
-            "options": {"custom_name": "sub2"},
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "7755331188664422", "options": {"custom_name": "sub2"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_sub",
         "kind": "reply",
-        "data": {
-            "result": False,
-        }
+        "data": {"result": False},
     }
     assert get_options("7755331188664422") is None
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "2244668811335577",
-            "options": {"custom_name": "subsub2"},
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_subsub",
+            "kind": "request",
+            "data": {"controller_id": "2244668811335577", "options": {"custom_name": "subsub2"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_subsub",
         "kind": "reply",
-        "data": {
-            "result": False,
-        }
+        "data": {"result": False},
     }
     assert get_options("2244668811335577") is None
 
 
-@pytest.mark.only_backends(['openwrt'])
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_backends(["openwrt"])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_options_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result, lock_backend
+    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
-    uci = get_uci_module(lock_backend)
+    uci = get_uci_module(infrastructure.name)
 
     token = prepare_subordinate_token("3344112266779988")
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": token,
-        }
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {"result": True, "controller_id": "3344112266779988"}
+        "data": {"result": True, "controller_id": "3344112266779988"},
     }
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_sub",
-        "kind": "request",
-        "data": {
-            "controller_id": "3344112266779988",
-            "options": {"custom_name": "sub3"},
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "3344112266779988", "options": {"custom_name": "sub3"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_sub",
         "kind": "reply",
-        "data": {
-            "result": True,
-        }
+        "data": {"result": True},
     }
 
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
         data = backend.read()
-    assert uci.get_option_named(
-        data, "foris-controller-subordinates", "3344112266779988", "custom_name", "") == "sub3"
+    assert (
+        uci.get_option_named(
+            data, "foris-controller-subordinates", "3344112266779988", "custom_name", ""
+        )
+        == "sub3"
+    )
 
     # add subsub
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "8899776622114433",
-            "via": "3344112266779988",
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "add_subsub",
+            "kind": "request",
+            "data": {"controller_id": "8899776622114433", "via": "3344112266779988"},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_subsub",
         "kind": "reply",
-        "data": {"result": True}
+        "data": {"result": True},
     }
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "update_subsub",
-        "kind": "request",
-        "data": {
-            "controller_id": "8899776622114433",
-            "options": {"custom_name": "subsub3"},
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_subsub",
+            "kind": "request",
+            "data": {"controller_id": "8899776622114433", "options": {"custom_name": "subsub3"}},
         }
-    })
+    )
     assert res == {
         "module": "subordinates",
         "action": "update_subsub",
         "kind": "reply",
-        "data": {
-            "result": True,
-        }
+        "data": {"result": True},
     }
 
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
         data = backend.read()
-    assert uci.get_option_named(
-        data, "foris-controller-subordinates", "8899776622114433", "custom_name", "") == "subsub3"
+    assert (
+        uci.get_option_named(
+            data, "foris-controller-subordinates", "8899776622114433", "custom_name", ""
+        )
+        == "subsub3"
+    )
 
 
-@pytest.mark.only_message_buses(['mqtt'])
+@pytest.mark.only_message_buses(["mqtt"])
 def test_netboot_token(
     uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
 ):
@@ -1154,20 +1136,12 @@ NSEXxbmbrDG6VR72dTLsmqvynNDn1z6rfGHmB5PAX1i6vQirFz3RvcVCKdZSqf/3J4Kf7bN9ts/2\
 2T7bZ/tsn+2zfbbP9tk+22f7bJ/tv2X7P2Qzx0UAUAAA\
 """
 
-    res = infrastructure.process_message({
-        "module": "subordinates",
-        "action": "add_sub",
-        "kind": "request",
-        "data": {
-            "token": token,
-        }
-    })
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
     assert res == {
         "module": "subordinates",
         "action": "add_sub",
         "kind": "reply",
-        "data": {
-            "result": True,
-            'controller_id': '0000000D30000165',
-        }
+        "data": {"result": True, "controller_id": "0000000D30000165"},
     }
