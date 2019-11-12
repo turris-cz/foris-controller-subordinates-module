@@ -48,7 +48,7 @@ setup(
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
     install_requires=[
-        "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git",
+        "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller.git",
     ],
     setup_requires=[
         'pytest-runner',
@@ -61,8 +61,8 @@ setup(
         'paho-mqtt',
     ],
     dependency_links=[
-        "git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git#egg=foris-controller-testtools",
-        "git+https://gitlab.labs.nic.cz/turris/foris-client.git#egg=foris-client",
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-client.git#egg=foris-client",
     ],
     include_package_data=True,
     zip_safe=False,
