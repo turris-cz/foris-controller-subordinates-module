@@ -1,9 +1,10 @@
 {
     "definitions": {
+        "custom_name": {"type": "string", "maxLength": 30},
         "subordinate_options": {
             "type": "object",
             "properties": {
-                "custom_name": {"type": "string"}
+                "custom_name": {"$ref": "#/definitions/custom_name"}
             },
             "additionalProperties": false,
             "required": ["custom_name"]
@@ -11,7 +12,7 @@
         "subsubordinate_options": {
             "type": "object",
             "properties": {
-                "custom_name": {"type": "string"}
+                "custom_name": {"$ref": "#/definitions/custom_name"}
             },
             "additionalProperties": false,
             "required": ["custom_name"]

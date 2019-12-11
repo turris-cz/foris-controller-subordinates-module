@@ -84,5 +84,5 @@ def pytest_generate_tests(metafunc):
     if "message_bus" in metafunc.fixturenames:
         message_bus = metafunc.config.option.message_bus
         if not message_bus:
-            message_bus = ["ubus"]
+            message_bus = ["mqtt"]
         metafunc.parametrize("message_bus_param", message_bus, scope="module")
