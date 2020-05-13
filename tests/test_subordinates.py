@@ -1,6 +1,6 @@
 #
 # foris-controller-subordinates-module
-# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2020 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@ import json
 import pytest
 import tarfile
 import pathlib
-import threading
 
 from io import BytesIO
 
@@ -30,7 +29,6 @@ from io import BytesIO
 from foris_controller_testtools.fixtures import (
     backend,
     infrastructure,
-    ubusd_test,
     only_backends,
     only_message_buses,
     uci_configs_init,
@@ -38,8 +36,6 @@ from foris_controller_testtools.fixtures import (
     file_root_init,
     network_restart_command,
     UCI_CONFIG_DIR_PATH,
-    mosquitto_test,
-    start_buses,
     FILE_ROOT_PATH,
 )
 from foris_controller_testtools.utils import get_uci_module, check_service_result
@@ -84,9 +80,7 @@ def prepare_subordinate_token(controller_id):
 
 
 @pytest.mark.only_message_buses(["unix-socket", "ubus"])
-def test_complex_subordinates_unsupported(
-    uci_configs_init, infrastructure, start_buses, file_root_init
-):
+def test_complex_subordinates_unsupported(uci_configs_init, infrastructure, file_root_init):
     res = infrastructure.process_message(
         {"module": "subordinates", "action": "list", "kind": "request"}
     )
@@ -155,9 +149,7 @@ def test_complex_subordinates_unsupported(
 
 
 @pytest.mark.only_message_buses(["mqtt"])
-def test_complex_subordinates(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
-):
+def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, init_script_result):
     def in_list(controller_id):
         res = infrastructure.process_message(
             {"module": "subordinates", "action": "list", "kind": "request"}
@@ -351,7 +343,7 @@ def test_complex_subordinates(
 @pytest.mark.only_backends(["openwrt"])
 @pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
+    uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     uci = get_uci_module(infrastructure.name)
     token = prepare_subordinate_token("1122334455667788")
@@ -432,9 +424,7 @@ def test_complex_subordinates_openwrt(
 
 
 @pytest.mark.only_message_buses(["unix-socket", "ubus"])
-def test_complex_subsubordinates_unsupported(
-    uci_configs_init, infrastructure, start_buses, file_root_init
-):
+def test_complex_subsubordinates_unsupported(uci_configs_init, infrastructure, file_root_init):
     res = infrastructure.process_message(
         {
             "module": "subordinates",
@@ -481,7 +471,7 @@ def test_complex_subsubordinates_unsupported(
 
 @pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subsubordinates(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
+    uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     # prepare subordinates
     def add_subordinate(controller_id, result):
@@ -684,7 +674,7 @@ def test_complex_subsubordinates(
 @pytest.mark.only_backends(["openwrt"])
 @pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subsubordinates_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
+    uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     uci = get_uci_module(infrastructure.name)
 
@@ -805,7 +795,7 @@ def test_complex_subsubordinates_openwrt(
 
 @pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_options(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
+    uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     def get_options(controller_id):
         res = infrastructure.process_message(
@@ -914,7 +904,7 @@ def test_complex_subordinates_options(
 @pytest.mark.only_backends(["openwrt"])
 @pytest.mark.only_message_buses(["mqtt"])
 def test_complex_subordinates_options_openwrt(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
+    uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     uci = get_uci_module(infrastructure.name)
 
@@ -995,9 +985,7 @@ def test_complex_subordinates_options_openwrt(
 
 
 @pytest.mark.only_message_buses(["mqtt"])
-def test_netboot_token(
-    uci_configs_init, infrastructure, start_buses, file_root_init, init_script_result
-):
+def test_netboot_token(uci_configs_init, infrastructure, file_root_init, init_script_result):
     # test token which was generate net accepting client for netboot
     token = """\
 H4sIAAAAAAACA+17aY/jSJJlfeavCNSnGWh6xPvCzgI8RUqkJEokdSwGA96kJB6iKFHiov/7mjOz\
