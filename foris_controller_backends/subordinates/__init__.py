@@ -33,8 +33,13 @@ from foris_controller.app import app_info
 
 from foris_controller_backends.files import BaseFile, makedirs, inject_file_root
 from foris_controller_backends.uci import (
-    UciBackend, parse_bool, UciException, store_bool,
-    get_sections_by_type, get_section, UciRecordNotFound
+    UciBackend,
+    parse_bool,
+    UciException,
+    store_bool,
+    get_sections_by_type,
+    get_section,
+    UciRecordNotFound,
 )
 from foris_controller.utils import RWLock
 from foris_controller_backends.services import OpenwrtServices
@@ -46,7 +51,6 @@ subordinate_dir_lock = RWLock(app_info["lock_backend"])
 
 
 class SubordinatesUci(object):
-
     def _get_options_section(
         self, data: dict, controller_id: str, section_type: str
     ) -> typing.Optional[dict]:
@@ -78,16 +82,19 @@ class SubordinatesUci(object):
                 # try to get options
                 options = {"custom_name": ""}
                 options_section = self._get_options_section(
-                    sub_data, controller_id, "subsubordinate")
+                    sub_data, controller_id, "subsubordinate"
+                )
                 if options_section:
                     options["custom_name"] = options_section["data"].get("custom_name", "")
 
                 subsubs = subordinates_map.get(item["data"]["via"], [])
-                subsubs.append({
-                    "controller_id": controller_id,
-                    "options": options,
-                    "enabled": parse_bool(item["data"].get("enabled", "1")),
-                })
+                subsubs.append(
+                    {
+                        "controller_id": controller_id,
+                        "options": options,
+                        "enabled": parse_bool(item["data"].get("enabled", "1")),
+                    }
+                )
                 subordinates_map[item["data"]["via"]] = subsubs
 
         for item in get_sections_by_type(fosquitto_data, "fosquitto", "subordinate"):
@@ -95,15 +102,15 @@ class SubordinatesUci(object):
             enabled = parse_bool(item["data"].get("enabled", "0"))
 
             # try to get options
-            options = {"custom_name": ""}
-            options_section = self._get_options_section(
-                sub_data, controller_id, "subordinate")
+            options = {"custom_name": "", "ip_address": item["data"].get("address", "")}
+            options_section = self._get_options_section(sub_data, controller_id, "subordinate")
             if options_section:
                 options["custom_name"] = options_section["data"].get("custom_name", "")
 
             res.append(
                 {
-                    "controller_id": controller_id, "enabled": enabled,
+                    "controller_id": controller_id,
+                    "enabled": enabled,
                     "options": options,
                     "subsubordinates": subordinates_map.get(controller_id, []),
                 }
@@ -152,8 +159,8 @@ class SubordinatesUci(object):
         with UciBackend() as backend:
             fosquitto_data = backend.read("fosquitto")
             to_delete = [
-                e["name"] for e in
-                get_sections_by_type(fosquitto_data, "fosquitto", "subsubordinate")
+                e["name"]
+                for e in get_sections_by_type(fosquitto_data, "fosquitto", "subsubordinate")
                 if e["data"].get("via") == controller_id
             ]
             try:
@@ -167,38 +174,33 @@ class SubordinatesUci(object):
 
     def existing_controller_ids(self):
         sub_list = self.list_subordinates()
-        return [app_info["controller_id"]] + [
-            e["controller_id"] for e in sub_list
-        ] + [
-            e["controller_id"]
-            for record in sub_list
-            for e in record["subsubordinates"]
-        ]
+        return (
+            [app_info["controller_id"]]
+            + [e["controller_id"] for e in sub_list]
+            + [e["controller_id"] for record in sub_list for e in record["subsubordinates"]]
+        )
 
     def update_sub(self, controller_id: str, custom_name: str):
         with UciBackend() as backend:
             fosquitto_data = backend.read("fosquitto")
-            if not self._get_fosquitto_section(
-                fosquitto_data, controller_id, "subordinate"
-            ):
+            if not self._get_fosquitto_section(fosquitto_data, controller_id, "subordinate"):
                 return False
 
             backend.add_section("foris-controller-subordinates", "subordinate", controller_id)
             backend.set_option(
-                "foris-controller-subordinates", controller_id, "custom_name", custom_name)
+                "foris-controller-subordinates", controller_id, "custom_name", custom_name
+            )
         return True
 
     def update_subsub(self, controller_id: str, custom_name: str):
         with UciBackend() as backend:
             fosquitto_data = backend.read("fosquitto")
-            if not self._get_fosquitto_section(
-                fosquitto_data, controller_id, "subsubordinate"
-            ):
+            if not self._get_fosquitto_section(fosquitto_data, controller_id, "subsubordinate"):
                 return False
-            backend.add_section(
-                "foris-controller-subordinates", "subsubordinate", controller_id)
+            backend.add_section("foris-controller-subordinates", "subsubordinate", controller_id)
             backend.set_option(
-                "foris-controller-subordinates", controller_id, "custom_name", custom_name)
+                "foris-controller-subordinates", controller_id, "custom_name", custom_name
+            )
         return True
 
 
@@ -274,7 +276,6 @@ class SubordinatesComplex:
 
 
 class SubordinatesService:
-
     def restart(self):
         with OpenwrtServices() as services:
             services.restart("fosquitto")

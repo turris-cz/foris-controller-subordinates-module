@@ -1,13 +1,22 @@
 {
     "definitions": {
         "custom_name": {"type": "string", "maxLength": 30},
-        "subordinate_options": {
+        "subordinate_options_set": {
             "type": "object",
             "properties": {
                 "custom_name": {"$ref": "#/definitions/custom_name"}
             },
             "additionalProperties": false,
             "required": ["custom_name"]
+        },
+        "subordinate_options_get": {
+            "type": "object",
+            "properties": {
+                "custom_name": {"$ref": "#/definitions/custom_name"},
+                "ip_address": {"type": "string", "format": "ipv4"}
+            },
+            "additionalProperties": false,
+            "required": ["custom_name", "ip_address"]
         },
         "subsubordinate_options": {
             "type": "object",
@@ -22,7 +31,7 @@
             "properties": {
                 "controller_id": {"$ref": "#/definitions/controller_id"},
                 "enabled": {"type": "boolean"},
-                "options": {"$ref": "#/definitions/subordinate_options"},
+                "options": {"$ref": "#/definitions/subordinate_options_get"},
                 "subsubordinates": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/subsubordinate"}
@@ -317,7 +326,7 @@
                     "type": "object",
                     "properties": {
                         "controller_id": {"$ref": "#/definitions/controller_id"},
-                        "options": {"$ref": "#/definitions/subordinate_options"}
+                        "options": {"$ref": "#/definitions/subordinate_options_set"}
                     },
                     "additionalProperties": false,
                     "required": ["controller_id", "options"]
@@ -354,7 +363,7 @@
                     "type": "object",
                     "properties": {
                         "controller_id": {"$ref": "#/definitions/controller_id"},
-                        "options": {"$ref": "#/definitions/subordinate_options"}
+                        "options": {"$ref": "#/definitions/subordinate_options_set"}
                     },
                     "additionalProperties": false,
                     "required": ["controller_id", "options"]

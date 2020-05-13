@@ -52,7 +52,14 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
         with tarfile.open(fileobj=token_data, mode="r:gz") as tar:
             config_name = [e for e in tar.getmembers() if e.name.endswith("conf.json")][0]
             with tar.extractfile(config_name) as f:
-                controller_id = json.load(f)["device_id"]
+                device_data = json.load(f)
+                controller_id = device_data["device_id"]
+                if len(device_data["ipv4_ips"]["lan"]) > 0:
+                    ip_address = device_data["ipv4_ips"]["lan"][0]
+                elif len(device_data["ipv4_ips"]["wan"]) > 0:
+                    ip_address = device_data["ipv4_ips"]["wan"][0]
+                else:
+                    ip_address = ""
 
         for record in MockSubordinatesHandler.subordinates:
             if record["controller_id"] == controller_id:
@@ -66,12 +73,14 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
         if controller_id in existing_subsubordinates:
             return {"result": False}
 
-        MockSubordinatesHandler.subordinates.append({
-            "controller_id": controller_id,
-            "enabled": True,
-            "options": {"custom_name": ""},
-            "subsubordinates": [],
-        })
+        MockSubordinatesHandler.subordinates.append(
+            {
+                "controller_id": controller_id,
+                "enabled": True,
+                "options": {"custom_name": "", "ip_address": ip_address},
+                "subsubordinates": [],
+            }
+        )
 
         return {"result": True, "controller_id": controller_id}
 
@@ -109,8 +118,9 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
     def set_enabled(self, controller_id, enabled) -> bool:
         if app_info["bus"] != "mqtt":
             return False
-        return self.set_sub_enabled(controller_id, enabled) or \
-            self.set_subsub_enabled(controller_id, enabled)
+        return self.set_sub_enabled(controller_id, enabled) or self.set_subsub_enabled(
+            controller_id, enabled
+        )
 
     @logger_wrapper(logger)
     def set_subsub_enabled(self, controller_id, enabled) -> bool:
@@ -153,11 +163,9 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
         if controller_id in existing_subsubordinates:
             return False
 
-        mapped[via]["subsubordinates"].append({
-            "controller_id": controller_id,
-            "enabled": True,
-            "options": {"custom_name": ""},
-        })
+        mapped[via]["subsubordinates"].append(
+            {"controller_id": controller_id, "enabled": True, "options": {"custom_name": ""},}
+        )
 
         return True
 

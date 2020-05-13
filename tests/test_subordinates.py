@@ -41,7 +41,7 @@ from foris_controller_testtools.fixtures import (
 from foris_controller_testtools.utils import get_uci_module, check_service_result
 
 
-def prepare_subordinate_token(controller_id):
+def prepare_subordinate_token(controller_id: str, ip_address: str) -> str:
     def add_to_tar(tar, name, content):
         data = content.encode()
         fake_file = BytesIO(data)
@@ -64,7 +64,7 @@ def prepare_subordinate_token(controller_id):
                 {
                     "name": "some_name",
                     "hostname": "localhost",
-                    "ipv4_ips": {"lan": ["123.123.123.123"], "wan": []},
+                    "ipv4_ips": {"lan": [ip_address], "wan": []},
                     "dhcp_names": [],
                     "port": 11884,
                     "device_id": controller_id,
@@ -95,7 +95,7 @@ def test_complex_subordinates_unsupported(uci_configs_init, infrastructure, file
             "module": "subordinates",
             "action": "add_sub",
             "kind": "request",
-            "data": {"token": prepare_subordinate_token("1122334455667788")},
+            "data": {"token": prepare_subordinate_token("1122334455667788", "1.1.1.1")},
         }
     )
     assert res == {
@@ -163,7 +163,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
         return output
 
     assert None is in_list("1122334455667788")
-    token = prepare_subordinate_token("1122334455667788")
+    token = prepare_subordinate_token("1122334455667788", "2.2.2.2")
 
     filters = [("subordinates", "add_sub")]
     notifications = infrastructure.get_notifications(filters=filters)
@@ -190,7 +190,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
     assert in_list("1122334455667788") == {
         "controller_id": "1122334455667788",
         "enabled": True,
-        "options": {"custom_name": ""},
+        "options": {"custom_name": "", "ip_address": "2.2.2.2"},
         "subsubordinates": [],
     }
 
@@ -209,7 +209,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
     assert in_list("1122334455667788") == {
         "controller_id": "1122334455667788",
         "enabled": True,
-        "options": {"custom_name": ""},
+        "options": {"custom_name": "", "ip_address": "2.2.2.2"},
         "subsubordinates": [],
     }
 
@@ -219,7 +219,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
             "module": "subordinates",
             "action": "add_sub",
             "kind": "request",
-            "data": {"token": prepare_subordinate_token("8877665544332211")},
+            "data": {"token": prepare_subordinate_token("8877665544332211", "3.3.3.3")},
         }
     )
     assert res == {
@@ -240,7 +240,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
     assert in_list("8877665544332211") == {
         "controller_id": "8877665544332211",
         "enabled": True,
-        "options": {"custom_name": ""},
+        "options": {"custom_name": "", "ip_address": "3.3.3.3"},
         "subsubordinates": [],
     }
 
@@ -273,7 +273,7 @@ def test_complex_subordinates(uci_configs_init, infrastructure, file_root_init, 
     assert in_list("1122334455667788") == {
         "controller_id": "1122334455667788",
         "enabled": False,
-        "options": {"custom_name": ""},
+        "options": {"custom_name": "", "ip_address": "2.2.2.2"},
         "subsubordinates": [],
     }
     res = infrastructure.process_message(
@@ -346,7 +346,7 @@ def test_complex_subordinates_openwrt(
     uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     uci = get_uci_module(infrastructure.name)
-    token = prepare_subordinate_token("1122334455667788")
+    token = prepare_subordinate_token("1122334455667788", "4.4.4.4")
     res = infrastructure.process_message(
         {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
     )
@@ -360,10 +360,7 @@ def test_complex_subordinates_openwrt(
     with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
         data = backend.read()
 
-    assert (
-        uci.get_option_named(data, "fosquitto", "1122334455667788", "address", "")
-        == "123.123.123.123"
-    )
+    assert uci.get_option_named(data, "fosquitto", "1122334455667788", "address", "") == "4.4.4.4"
     assert uci.get_option_named(data, "fosquitto", "1122334455667788", "port", "") == "11884"
     assert uci.parse_bool(
         uci.get_option_named(data, "fosquitto", "1122334455667788", "enabled", "")
@@ -474,8 +471,8 @@ def test_complex_subsubordinates(
     uci_configs_init, infrastructure, file_root_init, init_script_result
 ):
     # prepare subordinates
-    def add_subordinate(controller_id, result):
-        token = prepare_subordinate_token(controller_id)
+    def add_subordinate(controller_id, ip_address, result):
+        token = prepare_subordinate_token(controller_id, ip_address)
         res = infrastructure.process_message(
             {
                 "module": "subordinates",
@@ -499,8 +496,8 @@ def test_complex_subsubordinates(
                 "data": {"result": False},
             }
 
-    add_subordinate("8888888888888888", True)
-    add_subordinate("7777777777777777", True)
+    add_subordinate("8888888888888888", "5.5.5.5", True)
+    add_subordinate("7777777777777777", "6.6.6.6", True)
 
     def check_under(parent, child):
         res = infrastructure.process_message(
@@ -607,7 +604,7 @@ def test_complex_subsubordinates(
     }
 
     # add sub but subsub already exists
-    add_subordinate("6666666666666666", False)
+    add_subordinate("6666666666666666", "7.7.7.7", False)
 
     filters = [("subordinates", "set_enabled")]
     notifications = infrastructure.get_notifications(filters=filters)
@@ -678,8 +675,8 @@ def test_complex_subsubordinates_openwrt(
 ):
     uci = get_uci_module(infrastructure.name)
 
-    def add_subordinate(controller_id):
-        token = prepare_subordinate_token(controller_id)
+    def add_subordinate(controller_id, ip_address):
+        token = prepare_subordinate_token(controller_id, ip_address)
         res = infrastructure.process_message(
             {
                 "module": "subordinates",
@@ -696,8 +693,8 @@ def test_complex_subsubordinates_openwrt(
         }
         check_service_result("fosquitto", "restart", passed=True)
 
-    add_subordinate("4444444444444444")
-    add_subordinate("5555555555555555")
+    add_subordinate("4444444444444444", "8.8.8.8")
+    add_subordinate("5555555555555555", "9.9.9.9")
 
     # add subsub
     res = infrastructure.process_message(
@@ -817,7 +814,7 @@ def test_complex_subordinates_options(
             "module": "subordinates",
             "action": "add_sub",
             "kind": "request",
-            "data": {"token": prepare_subordinate_token("1234567887654321")},
+            "data": {"token": prepare_subordinate_token("1234567887654321", "10.10.10.10")},
         }
     )
     assert res["data"]["result"]
@@ -831,7 +828,7 @@ def test_complex_subordinates_options(
     )
     assert res["data"]["result"]
 
-    assert get_options("1234567887654321") == {"custom_name": ""}
+    assert get_options("1234567887654321") == {"custom_name": "", "ip_address": "10.10.10.10"}
     assert get_options("8765432112345678") == {"custom_name": ""}
 
     # sub
@@ -840,7 +837,7 @@ def test_complex_subordinates_options(
             "module": "subordinates",
             "action": "update_sub",
             "kind": "request",
-            "data": {"controller_id": "1234567887654321", "options": {"custom_name": "sub1"}},
+            "data": {"controller_id": "1234567887654321", "options": {"custom_name": "sub1"},},
         }
     )
     assert res == {
@@ -849,7 +846,7 @@ def test_complex_subordinates_options(
         "kind": "reply",
         "data": {"result": True},
     }
-    assert get_options("1234567887654321") == {"custom_name": "sub1"}
+    assert get_options("1234567887654321") == {"custom_name": "sub1", "ip_address": "10.10.10.10"}
 
     # subsub
     res = infrastructure.process_message(
@@ -857,7 +854,7 @@ def test_complex_subordinates_options(
             "module": "subordinates",
             "action": "update_subsub",
             "kind": "request",
-            "data": {"controller_id": "8765432112345678", "options": {"custom_name": "subsub1"}},
+            "data": {"controller_id": "8765432112345678", "options": {"custom_name": "subsub1"},},
         }
     )
     assert res == {
@@ -874,7 +871,7 @@ def test_complex_subordinates_options(
             "module": "subordinates",
             "action": "update_sub",
             "kind": "request",
-            "data": {"controller_id": "7755331188664422", "options": {"custom_name": "sub2"}},
+            "data": {"controller_id": "7755331188664422", "options": {"custom_name": "sub2"},},
         }
     )
     assert res == {
@@ -889,7 +886,7 @@ def test_complex_subordinates_options(
             "module": "subordinates",
             "action": "update_subsub",
             "kind": "request",
-            "data": {"controller_id": "2244668811335577", "options": {"custom_name": "subsub2"}},
+            "data": {"controller_id": "2244668811335577", "options": {"custom_name": "subsub2"},},
         }
     )
     assert res == {
@@ -908,7 +905,7 @@ def test_complex_subordinates_options_openwrt(
 ):
     uci = get_uci_module(infrastructure.name)
 
-    token = prepare_subordinate_token("3344112266779988")
+    token = prepare_subordinate_token("3344112266779988", "11.11.11.11")
     res = infrastructure.process_message(
         {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
     )
@@ -924,7 +921,7 @@ def test_complex_subordinates_options_openwrt(
             "module": "subordinates",
             "action": "update_sub",
             "kind": "request",
-            "data": {"controller_id": "3344112266779988", "options": {"custom_name": "sub3"}},
+            "data": {"controller_id": "3344112266779988", "options": {"custom_name": "sub3"},},
         }
     )
     assert res == {
@@ -941,6 +938,9 @@ def test_complex_subordinates_options_openwrt(
             data, "foris-controller-subordinates", "3344112266779988", "custom_name", ""
         )
         == "sub3"
+    )
+    assert (
+        uci.get_option_named(data, "fosquitto", "3344112266779988", "address", "") == "11.11.11.11"
     )
 
     # add subsub
