@@ -4,7 +4,8 @@
         "subordinate_options_set": {
             "type": "object",
             "properties": {
-                "custom_name": {"$ref": "#/definitions/custom_name"}
+                "custom_name": {"$ref": "#/definitions/custom_name"},
+                "ip_address": {"type": "string", "format": "ipv4"}
             },
             "additionalProperties": false,
             "required": ["custom_name"]

@@ -22,6 +22,7 @@ import json
 import pytest
 import tarfile
 import pathlib
+import typing
 
 from io import BytesIO
 
@@ -1133,3 +1134,133 @@ NSEXxbmbrDG6VR72dTLsmqvynNDn1z6rfGHmB5PAX1i6vQirFz3RvcVCKdZSqf/3J4Kf7bN9ts/2\
         "kind": "reply",
         "data": {"result": True, "controller_id": "0000000D30000165"},
     }
+
+
+@pytest.mark.only_message_buses(["mqtt"])
+def test_set_ip_address_subordinates(
+    uci_configs_init, infrastructure, file_root_init, init_script_result
+):
+    def ip_in_list(controller_id: str) -> typing.Optional[str]:
+        res = infrastructure.process_message(
+            {"module": "subordinates", "action": "list", "kind": "request"}
+        )
+        assert "subordinates" in res["data"]
+        for record in res["data"]["subordinates"]:
+            assert set(record.keys()) == {"options", "controller_id", "enabled", "subsubordinates"}
+            if record["controller_id"] == controller_id:
+                return record["options"]["ip_address"]
+
+        return None
+
+    token = prepare_subordinate_token("1122334455667788", "12.12.12.12")
+
+    filters = [("subordinates", "update_sub")]
+
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
+    assert "erorrs" not in res
+
+    notifications = infrastructure.get_notifications(filters=filters)
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {
+                "controller_id": "1122334455667788",
+                "options": {"custom_name": "nicer name", "ip_address": "112.112.112.112"},
+            },
+        }
+    )
+    assert "errors" not in res
+    if infrastructure.backend_name == "openwrt":
+        check_service_result("fosquitto", "restart", passed=True)
+    notifications = infrastructure.get_notifications(notifications, filters=filters)
+    assert notifications[-1] == {
+        "module": "subordinates",
+        "action": "update_sub",
+        "kind": "notification",
+        "data": {
+            "controller_id": "1122334455667788",
+            "options": {"custom_name": "nicer name", "ip_address": "112.112.112.112"},
+        },
+    }
+
+    assert "112.112.112.112" == ip_in_list("1122334455667788")
+
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "options": {"custom_name": "nope"},},
+        }
+    )
+    assert "errors" not in res
+
+    notifications = infrastructure.get_notifications(notifications, filters=filters)
+    assert notifications[-1] == {
+        "module": "subordinates",
+        "action": "update_sub",
+        "kind": "notification",
+        "data": {"controller_id": "1122334455667788", "options": {"custom_name": "nope"},},
+    }
+    if infrastructure.backend_name == "openwrt":
+        check_service_result("fosquitto", "restart", passed=True, expected_found=False)
+
+    assert "112.112.112.112" == ip_in_list("1122334455667788")
+
+
+@pytest.mark.only_backends(["openwrt"])
+@pytest.mark.only_message_buses(["mqtt"])
+def test_set_ip_address_subordinates_openwrt(
+    uci_configs_init, infrastructure, file_root_init, init_script_result
+):
+    uci = get_uci_module(infrastructure.name)
+
+    token = prepare_subordinate_token("1122334455667788", "13.13.13.13")
+
+    res = infrastructure.process_message(
+        {"module": "subordinates", "action": "add_sub", "kind": "request", "data": {"token": token}}
+    )
+    assert "erorrs" not in res
+
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {
+                "controller_id": "1122334455667788",
+                "options": {"custom_name": "nicer name", "ip_address": "113.113.113.113"},
+            },
+        }
+    )
+    assert "errors" not in res
+    check_service_result("fosquitto", "restart", passed=True)
+    with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
+        data = backend.read()
+
+    assert (
+        uci.get_option_named(data, "fosquitto", "1122334455667788", "address", "")
+        == "113.113.113.113"
+    )
+
+    res = infrastructure.process_message(
+        {
+            "module": "subordinates",
+            "action": "update_sub",
+            "kind": "request",
+            "data": {"controller_id": "1122334455667788", "options": {"custom_name": "nope"},},
+        }
+    )
+    assert "errors" not in res
+    check_service_result("fosquitto", "restart", passed=True, expected_found=False)
+    with uci.UciBackend(UCI_CONFIG_DIR_PATH) as backend:
+        data = backend.read()
+
+    assert (
+        uci.get_option_named(data, "fosquitto", "1122334455667788", "address", "")
+        == "113.113.113.113"
+    )

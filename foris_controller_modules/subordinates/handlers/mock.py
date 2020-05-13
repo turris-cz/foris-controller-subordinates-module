@@ -60,6 +60,7 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
                     ip_address = device_data["ipv4_ips"]["wan"][0]
                 else:
                     ip_address = ""
+                ip_address = ip_address or "0.0.0.0"  # fake ip
 
         for record in MockSubordinatesHandler.subordinates:
             if record["controller_id"] == controller_id:
@@ -174,13 +175,18 @@ class MockSubordinatesHandler(Handler, BaseMockHandler):
         pass  # mock service restart
 
     @logger_wrapper(logger)
-    def update_sub(self, controller_id: str, custom_name: str):
+    def update_sub(
+        self, controller_id: str, custom_name: str, ip_address: typing.Optional[str] = None
+    ):
         if app_info["bus"] != "mqtt":
             return False
 
         for record in MockSubordinatesHandler.subordinates:
             if record["controller_id"] == controller_id:
                 record["options"]["custom_name"] = custom_name
+                if ip_address:
+                    record["options"]["ip_address"] = ip_address
+
                 return True
 
         return False

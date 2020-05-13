@@ -102,7 +102,10 @@ class SubordinatesUci(object):
             enabled = parse_bool(item["data"].get("enabled", "0"))
 
             # try to get options
-            options = {"custom_name": "", "ip_address": item["data"].get("address", "")}
+            options = {
+                "custom_name": "",
+                "ip_address": item["data"].get("address", "0.0.0.0"),
+            }
             options_section = self._get_options_section(sub_data, controller_id, "subordinate")
             if options_section:
                 options["custom_name"] = options_section["data"].get("custom_name", "")
@@ -180,16 +183,28 @@ class SubordinatesUci(object):
             + [e["controller_id"] for record in sub_list for e in record["subsubordinates"]]
         )
 
-    def update_sub(self, controller_id: str, custom_name: str):
+    def update_sub(
+        self, controller_id: str, custom_name: str, ip_address: typing.Optional[str] = None
+    ):
+        restart = False
         with UciBackend() as backend:
             fosquitto_data = backend.read("fosquitto")
-            if not self._get_fosquitto_section(fosquitto_data, controller_id, "subordinate"):
+            section = self._get_fosquitto_section(fosquitto_data, controller_id, "subordinate")
+            if not section:
                 return False
 
             backend.add_section("foris-controller-subordinates", "subordinate", controller_id)
             backend.set_option(
                 "foris-controller-subordinates", controller_id, "custom_name", custom_name
             )
+            if ip_address is not None:
+                if ip_address != section["data"]["address"]:
+                    restart = True
+
+                backend.set_option("fosquitto", controller_id, "address", ip_address)
+        if restart:
+            SubordinatesService().restart()
+
         return True
 
     def update_subsub(self, controller_id: str, custom_name: str):
