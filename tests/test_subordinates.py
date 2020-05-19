@@ -1,6 +1,6 @@
 #
 # foris-controller-subordinates-module
-# Copyright (C) 2020 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019-2020 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -866,7 +866,7 @@ def test_complex_subordinates_options(
     }
     assert get_options("8765432112345678") == {"custom_name": "subsub1"}
 
-    # non-exsiting
+    # non-existing
     res = infrastructure.process_message(
         {
             "module": "subordinates",
