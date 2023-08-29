@@ -55,12 +55,12 @@ def prepare_subordinate_token(controller_id: str, ip_address: str) -> str:
 
     new_file = BytesIO()
     with tarfile.open(fileobj=new_file, mode="w:gz") as tar:
-        add_to_tar(tar, f"some_name/token.crt", "token cert content")
-        add_to_tar(tar, f"some_name/token.key", "token key content")
-        add_to_tar(tar, f"some_name/ca.crt", "ca cert content")
+        add_to_tar(tar, "some_name/token.crt", "token cert content")
+        add_to_tar(tar, "some_name/token.key", "token key content")
+        add_to_tar(tar, "some_name/ca.crt", "ca cert content")
         add_to_tar(
             tar,
-            f"some_name/conf.json",
+            "some_name/conf.json",
             json.dumps(
                 {
                     "name": "some_name",
