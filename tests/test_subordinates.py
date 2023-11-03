@@ -1,6 +1,6 @@
 #
 # foris-controller-subordinates-module
-# Copyright (C) 2019-2020 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019-2023 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,14 +28,6 @@ from io import BytesIO
 
 
 from foris_controller_testtools.fixtures import (
-    backend,
-    infrastructure,
-    only_backends,
-    only_message_buses,
-    uci_configs_init,
-    init_script_result,
-    file_root_init,
-    network_restart_command,
     UCI_CONFIG_DIR_PATH,
     FILE_ROOT_PATH,
 )
