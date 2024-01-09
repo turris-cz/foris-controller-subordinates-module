@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "foris-controller-subordinates-module"
+dynamic = ["version"]
+description = "Subordinates module for foris-controller"
+readme = "README.rst"
+license = "GPL-3.0-only"
+authors = [
+    { name = "CZ.NIC, z.s.p.o. (https://www.nic.cz/)", email = "packaging@turris.cz" },
+]
+dependencies = [
+    "foris-controller",
+]
+
+[project.optional-dependencies]
+mqtt = [
+    "paho-mqtt",
+]
+tests = [
+    "pytest",
+    "ubus",
+    "paho-mqtt",
+    "foris-client",
+    "foris-controller-testtools",
+]
+ubus = [
+    "ubus",
+]
+
+[tool.hatch.version]
+path = "foris_controller_subordinates_module/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/foris_controller_modules",
+    "/foris_controller_backends",
+    "/foris_controller_subordinates_module",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/foris_controller_modules",
+    "/foris_controller_backends",
+    "/foris_controller_subordinates_module",
+]
