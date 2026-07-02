@@ -1,6 +1,5 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  CI_TOX_ENVS: "-e py39,py310"
   CI_TOX_EXTRA: "--backend openwrt --backend mock"
   CI_TOX_IMAGE: registry.nic.cz/turris/foris-ci/python3
   IMAGE: registry.nic.cz/turris/foris-ci/python3
