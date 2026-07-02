@@ -33,6 +33,9 @@ ubus = [
 [tool.hatch.version]
 path = "foris_controller_subordinates_module/__init__.py"
 
+[project.entry-points.foris_controller_modules]
+subordinates = "foris_controller_modules.subordinates"
+
 [tool.hatch.build.targets.sdist]
 packages = [
     "foris_controller_backends/",
